@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Surat Jalan</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary  : #1a73e8;
+      --primary-d: #1557b0;
+      --success  : #34a853;
+      --warning  : #fbbc04;
+      --danger   : #ea4335;
+      --bg       : #f0f4f9;
+      --card     : #ffffff;
+      --border   : #dadce0;
+      --text     : #202124;
+      --muted    : #5f6368;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      background: var(--primary);
+      color: #fff;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topbar .logo { font-size: 1.5rem; }
+    .topbar h1   { font-size: 1.1rem; font-weight: 600; margin: 0; }
+    .topbar .sub { font-size: .78rem; opacity: .85; margin: 0; }
+    .topbar .ms-auto { display: flex; gap: 8px; align-items: center; }
+    .status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #fbbc04; display: inline-block;
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+    .status-dot.ok   { background: #34a853; animation: none; }
+    .status-dot.fail { background: #ea4335; animation: none; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+
+    /* ── MAIN LAYOUT ── */
+    .main-wrap { max-width: 780px; margin: 0 auto; padding: 28px 16px 60px; }
+
+    /* ── CONFIG BANNER ── */
+    .config-banner {
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .config-banner.show { display: flex; align-items: center; gap: 10px; }
+
+    /* ── DROP ZONE ── */
+    .dropzone {
+      border: 2.5px dashed var(--border);
+      border-radius: 16px;
+      background: var(--card);
+      padding: 48px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .2s;
+      position: relative;
+    }
+    .dropzone:hover, .dropzone.drag-over {
+      border-color: var(--primary);
+      background: #e8f0fe;
+    }
+    .dropzone .dz-icon { font-size: 3rem; color: var(--primary); margin-bottom: 12px; }
+    .dropzone h3       { font-size: 1.05rem; font-weight: 600; margin-bottom: 6px; }
+    .dropzone p        { color: var(--muted); font-size: .88rem; margin: 0; }
+    .dropzone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer;
+    }
+    .badge-fmt {
+      display: inline-block; background: #e8f0fe; color: var(--primary);
+      padding: 3px 10px; border-radius: 20px; font-size: .76rem; margin: 4px 3px;
+    }
+
+    /* ── FILE LIST ── */
+    .file-list { margin-top: 20px; }
+    .file-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      animation: slideIn .2s ease;
+    }
+    @keyframes slideIn { from{transform:translateY(-6px);opacity:0} to{transform:none;opacity:1} }
+    .file-icon { font-size: 1.7rem; flex-shrink: 0; }
+    .file-info { flex: 1; min-width: 0; }
+    .file-name { font-weight: 500; font-size: .92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-size { font-size: .78rem; color: var(--muted); }
+    .file-status {
+      font-size: .78rem; font-weight: 600; padding: 4px 12px;
+      border-radius: 20px; white-space: nowrap; flex-shrink: 0;
+    }
+    .status-pending  { background: #e8f0fe; color: var(--primary); }
+    .status-uploading{ background: #fff3cd; color: #856404; }
+    .status-done     { background: #d4edda; color: #155724; }
+    .status-error    { background: #f8d7da; color: #721c24; }
+    .file-progress {
+      height: 4px; background: #e0e0e0; border-radius: 4px;
+      margin-top: 8px; overflow: hidden;
+    }
+    .file-progress-bar {
+      height: 100%; background: var(--primary);
+      border-radius: 4px; width: 0%;
+      transition: width .3s ease;
+    }
+    .btn-remove {
+      background: none; border: none; color: #ccc;
+      cursor: pointer; font-size: 1.1rem; flex-shrink: 0;
+      transition: color .2s;
+    }
+    .btn-remove:hover { color: var(--danger); }
+
+    /* ── ACTION BAR ── */
+    .action-bar {
+      position: sticky; bottom: 0;
+      background: rgba(240,244,249,.95);
+      backdrop-filter: blur(8px);
+      padding: 14px 0;
+      margin: 0 -16px;
+      padding-left: 16px; padding-right: 16px;
+      border-top: 1px solid var(--border);
+    }
+    .btn-upload {
+      background: var(--primary); color: #fff;
+      border: none; border-radius: 10px;
+      padding: 13px 32px; font-size: .95rem; font-weight: 600;
+      cursor: pointer; transition: background .2s, transform .1s;
+      width: 100%;
+    }
+    .btn-upload:hover:not(:disabled) { background: var(--primary-d); }
+    .btn-upload:active:not(:disabled){ transform: scale(.98); }
+    .btn-upload:disabled { background: #dadce0; color: #80868b; cursor: not-allowed; }
+
+    .btn-clear {
+      background: none; border: 1px solid var(--border);
+      border-radius: 10px; padding: 13px 20px; font-size: .88rem;
+      color: var(--muted); cursor: pointer; transition: all .2s;
+    }
+    .btn-clear:hover { border-color: #aaa; color: var(--text); }
+
+    /* ── TOAST ── */
+    .toast-container {
+      position: fixed; bottom: 80px; right: 20px; z-index: 9999;
+    }
+    .toast-item {
+      background: #323232; color: #fff; padding: 12px 20px;
+      border-radius: 10px; margin-top: 8px; font-size: .88rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,.3);
+      animation: toastIn .25s ease;
+      max-width: 320px;
+    }
+    .toast-item.success { background: #1e7e34; }
+    .toast-item.error   { background: #bd2130; }
+    @keyframes toastIn { from{transform:translateY(12px);opacity:0} to{transform:none;opacity:1} }
+
+    /* ── SETTINGS MODAL ── */
+    .settings-btn {
+      background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3);
+      color: #fff; border-radius: 8px; padding: 6px 12px;
+      cursor: pointer; font-size: .82rem; transition: background .2s;
+    }
+    .settings-btn:hover { background: rgba(255,255,255,.25); }
+
+    /* ── SUMMARY ── */
+    .summary-bar {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px 20px;
+      margin-bottom: 16px; display: none;
+    }
+    .summary-bar.show { display: flex; gap: 24px; flex-wrap: wrap; }
+    .summ-item { text-align: center; }
+    .summ-num  { font-size: 1.5rem; font-weight: 700; line-height: 1; }
+    .summ-lbl  { font-size: .72rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<!-- ── TOPBAR ─────────────────────────────────────────────────── -->
+<div class="topbar">
+  <span class="logo">📦</span>
+  <div>
+    <h1>Upload Surat Jalan</h1>
+    <p class="sub">Sistem Ekstraksi Otomatis &nbsp;·&nbsp; Data tersimpan ke Google Sheets</p>
+  </div>
+  <div class="ms-auto">
+    <span class="status-dot" id="statusDot"></span>
+    <span id="statusText" style="font-size:.82rem">Mengecek…</span>
+    <button class="settings-btn" onclick="openSettings()"><i class="fa-solid fa-gear"></i> Setelan</button>
+  </div>
+</div>
+
+<!-- ── MAIN ───────────────────────────────────────────────────── -->
+<div class="main-wrap">
+
+  <!-- Config warning -->
+  <div class="config-banner" id="configBanner">
+    <i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b;font-size:1.2rem"></i>
+    <span>
+      <strong>Belum dikonfigurasi!</strong>
+      Masukkan URL Web App dan Token Upload melalui
+      <a href="#" onclick="openSettings();return false">Setelan</a>.
+    </span>
+  </div>
+
+  <!-- Summary bar -->
+  <div class="summary-bar" id="summaryBar">
+    <div class="summ-item"><div class="summ-num" id="sTot">0</div><div class="summ-lbl">Total</div></div>
+    <div class="summ-item"><div class="summ-num" style="color:var(--success)" id="sDone">0</div><div class="summ-lbl">Berhasil</div></div>
+    <div class="summ-item"><div class="summ-num" style="color:var(--danger)" id="sFail">0</div><div class="summ-lbl">Gagal</div></div>
+    <div class="summ-item"><div class="summ-num" style="color:#888" id="sPend">0</div><div class="summ-lbl">Menunggu</div></div>
+  </div>
+
+  <!-- Drop zone -->
+  <div class="dropzone" id="dropzone">
+    <input type="file" id="fileInput" multiple accept="image/*,.pdf">
+    <div class="dz-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+    <h3>Seret file ke sini atau klik untuk memilih</h3>
+    <p>Mendukung foto surat jalan (JPG, PNG, WebP) dan PDF</p>
+    <div style="margin-top:10px">
+      <span class="badge-fmt">JPG</span>
+      <span class="badge-fmt">PNG</span>
+      <span class="badge-fmt">WebP</span>
+      <span class="badge-fmt">PDF</span>
+    </div>
+    <p style="margin-top:8px;font-size:.78rem;color:#888">Maks. ukuran file: 15 MB per file · Bisa pilih banyak file sekaligus</p>
+  </div>
+
+  <!-- File list -->
+  <div class="file-list" id="fileList"></div>
+
+  <!-- Action bar -->
+  <div class="action-bar" id="actionBar" style="display:none">
+    <div class="d-flex gap-2">
+      <button class="btn-clear" onclick="clearAll()" title="Hapus semua file dari antrian">
+        <i class="fa-solid fa-trash-can"></i>
+      </button>
+      <button class="btn-upload" id="btnUpload" onclick="startUpload()">
+        <i class="fa-solid fa-paper-plane"></i> &nbsp;Upload Semua File
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── SETTINGS MODAL ─────────────────────────────────────────── -->
+<div class="modal fade" id="settingsModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:16px">
+      <div class="modal-header" style="background:var(--primary);color:#fff;border-radius:16px 16px 0 0">
+        <h5 class="modal-title"><i class="fa-solid fa-gear"></i> &nbsp;Konfigurasi Sistem</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">🌐 URL Web App (Apps Script)</label>
+          <input type="url" class="form-control" id="cfgUrl" placeholder="https://script.google.com/macros/s/…/exec">
+          <div class="form-text">Dapatkan dari: Apps Script → Deploy → Web App URL</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">🔑 Token Upload</label>
+          <input type="text" class="form-control font-monospace" id="cfgToken" placeholder="Token 40 karakter dari setupSystem()">
+          <div class="form-text">Dapatkan dari: Sheet → menu 📦 Surat Jalan → Lihat Token Upload</div>
+        </div>
+        <button class="btn btn-primary w-100" onclick="saveSettings()">
+          <i class="fa-solid fa-floppy-disk"></i> Simpan Konfigurasi
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════
+// KONFIGURASI — Akan otomatis tersimpan di localStorage
+// ═══════════════════════════════════════════════════════
+let WEB_APP_URL  = localStorage.getItem('sj_url')   || '';
+let UPLOAD_TOKEN = localStorage.getItem('sj_token') || '';
+const MAX_FILE_MB = 15;
+
+// ── State ────────────────────────────────────────────────
+const files      = [];   // { file, id, status, error }
+let isUploading  = false;
+let modalInst;
+
+// ── Init ─────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  modalInst = new bootstrap.Modal(document.getElementById('settingsModal'));
+  loadSettings();
+  checkConnection();
+  setupDrop();
+  document.getElementById('fileInput').addEventListener('change', e => addFiles(e.target.files));
+  // Reset file input agar file sama bisa dipilih ulang
+  document.getElementById('dropzone').addEventListener('click', () => {
+    if (isUploading) return;
+    document.getElementById('fileInput').value = '';
+  });
+});
+
+// ── Settings ─────────────────────────────────────────────
+function loadSettings() {
+  document.getElementById('cfgUrl').value   = WEB_APP_URL;
+  document.getElementById('cfgToken').value = UPLOAD_TOKEN;
+  if (!WEB_APP_URL || !UPLOAD_TOKEN) {
+    document.getElementById('configBanner').classList.add('show');
+  }
+}
+
+function saveSettings() {
+  WEB_APP_URL  = document.getElementById('cfgUrl').value.trim();
+  UPLOAD_TOKEN = document.getElementById('cfgToken').value.trim();
+  localStorage.setItem('sj_url',   WEB_APP_URL);
+  localStorage.setItem('sj_token', UPLOAD_TOKEN);
+  document.getElementById('configBanner').classList.remove('show');
+  modalInst.hide();
+  toast('✅ Konfigurasi disimpan!', 'success');
+  checkConnection();
+}
+
+function openSettings() { modalInst.show(); }
+
+// ── Connection check ─────────────────────────────────────
+async function checkConnection() {
+  const dot  = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  if (!WEB_APP_URL) {
+    dot.className  = 'status-dot fail';
+    text.textContent = 'Belum dikonfigurasi';
+    return;
+  }
+  try {
+    const r = await fetch(WEB_APP_URL, { method: 'GET', mode: 'no-cors' });
+    dot.className  = 'status-dot ok';
+    text.textContent = 'Terhubung';
+  } catch {
+    dot.className  = 'status-dot fail';
+    text.textContent = 'Tidak terhubung';
+  }
+}
+
+// ── Drag & Drop ──────────────────────────────────────────
+function setupDrop() {
+  const dz = document.getElementById('dropzone');
+  dz.addEventListener('dragenter', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragover',  e => { e.preventDefault(); });
+  dz.addEventListener('dragleave', e => { if (!dz.contains(e.relatedTarget)) dz.classList.remove('drag-over'); });
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('drag-over');
+    addFiles(e.dataTransfer.files);
+  });
+}
+
+// ── Add files ────────────────────────────────────────────
+function addFiles(fileList) {
+  const allowed = ['image/jpeg','image/jpg','image/png','image/webp','image/gif',
+                   'image/bmp','image/tiff','application/pdf'];
+  Array.from(fileList).forEach(f => {
+    if (!allowed.includes(f.type.toLowerCase())) {
+      toast(`⚠️ ${f.name}: tipe file tidak didukung`, 'error'); return;
+    }
+    if (f.size > MAX_FILE_MB * 1024 * 1024) {
+      toast(`⚠️ ${f.name}: ukuran melebihi ${MAX_FILE_MB} MB`, 'error'); return;
+    }
+    if (files.find(x => x.file.name === f.name && x.file.size === f.size)) {
+      toast(`ℹ️ ${f.name}: sudah ada di antrian`, ''); return;
+    }
+    files.push({ file: f, id: Date.now() + Math.random(), status: 'pending', error: '' });
+  });
+  renderList();
+}
+
+// ── Render file list ─────────────────────────────────────
+function renderList() {
+  const list = document.getElementById('fileList');
+  list.innerHTML = '';
+  files.forEach(item => {
+    const icon     = item.file.type === 'application/pdf' ? '📄' : '🖼️';
+    const sizeFmt  = formatSize(item.file.size);
+    const sc       = statusClass(item.status);
+    const sl       = statusLabel(item.status);
+    list.innerHTML += `
+      <div class="file-item" id="fi-${item.id}">
+        <span class="file-icon">${icon}</span>
+        <div class="file-info">
+          <div class="file-name" title="${esc(item.file.name)}">${esc(item.file.name)}</div>
+          <div class="file-size">${sizeFmt}${item.error ? ' · <span style="color:var(--danger)">'+esc(item.error)+'</span>' : ''}</div>
+          <div class="file-progress"><div class="file-progress-bar" id="pb-${item.id}"></div></div>
+        </div>
+        <span class="file-status ${sc}">${sl}</span>
+        ${item.status === 'pending' ? `<button class="btn-remove" onclick="removeFile('${item.id}')" title="Hapus"><i class="fa-solid fa-xmark"></i></button>` : ''}
+      </div>`;
+  });
+
+  const hasFiles = files.length > 0;
+  document.getElementById('actionBar').style.display  = hasFiles ? '' : 'none';
+  document.getElementById('summaryBar').style.display = hasFiles ? '' : 'none';
+  if (hasFiles) document.getElementById('summaryBar').classList.add('show');
+  updateSummary();
+}
+
+function removeFile(id) {
+  const idx = files.findIndex(x => String(x.id) === String(id));
+  if (idx >= 0) files.splice(idx, 1);
+  renderList();
+}
+
+function clearAll() {
+  if (isUploading) return;
+  files.length = 0;
+  renderList();
+}
+
+// ── Upload ───────────────────────────────────────────────
+async function startUpload() {
+  if (isUploading) return;
+  if (!WEB_APP_URL || !UPLOAD_TOKEN) {
+    toast('❌ Konfigurasi belum lengkap. Buka Setelan.', 'error'); openSettings(); return;
+  }
+  const pending = files.filter(f => f.status === 'pending');
+  if (!pending.length) { toast('ℹ️ Tidak ada file yang perlu diupload.'); return; }
+
+  isUploading = true;
+  document.getElementById('btnUpload').disabled = true;
+  document.getElementById('btnUpload').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> &nbsp;Mengupload…';
+
+  for (const item of pending) {
+    await uploadFile(item);
+    renderList();
+  }
+
+  isUploading = false;
+  document.getElementById('btnUpload').disabled = false;
+  document.getElementById('btnUpload').innerHTML = '<i class="fa-solid fa-paper-plane"></i> &nbsp;Upload Semua File';
+
+  const done = files.filter(f => f.status === 'done').length;
+  const fail = files.filter(f => f.status === 'error').length;
+  toast(`Upload selesai: ${done} berhasil, ${fail} gagal`, done > 0 ? 'success' : 'error');
+}
+
+async function uploadFile(item) {
+  setStatus(item, 'uploading');
+  setProgress(item, 10);
+
+  let base64;
+  try {
+    base64 = await toBase64(item.file);
+    setProgress(item, 40);
+  } catch (e) {
+    setStatus(item, 'error', 'Gagal membaca file: ' + e.message);
+    setProgress(item, 0);
+    return;
+  }
+
+  const payload = {
+    filename : item.file.name,
+    mimeType : item.file.type || 'application/octet-stream',
+    data     : base64,
+    size     : item.file.size,
+  };
+
+  setProgress(item, 60);
+
+  try {
+    const url  = WEB_APP_URL + '?token=' + encodeURIComponent(UPLOAD_TOKEN);
+    const resp = await fetch(url, {
+      method  : 'POST',
+      headers : { 'Content-Type': 'text/plain;charset=utf-8' },
+      body    : JSON.stringify(payload),
+    });
+
+    setProgress(item, 90);
+
+    let json;
+    try { json = await resp.json(); } catch { json = { success: false, message: 'Respons tidak valid' }; }
+
+    if (json.success) {
+      setStatus(item, 'done');
+      setProgress(item, 100);
+    } else {
+      setStatus(item, 'error', json.message || 'Upload gagal');
+      setProgress(item, 0);
+    }
+  } catch (err) {
+    setStatus(item, 'error', 'Koneksi gagal: ' + err.message);
+    setProgress(item, 0);
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────
+function toBase64(file) {
+  return new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload  = e => res(e.target.result.split(',')[1]);
+    reader.onerror = e => rej(new Error('FileReader error'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function setStatus(item, status, error = '') {
+  item.status = status;
+  item.error  = error;
+  const el = document.getElementById(`fi-${item.id}`);
+  if (!el) return;
+  el.querySelector('.file-status').className = `file-status ${statusClass(status)}`;
+  el.querySelector('.file-status').textContent = statusLabel(status);
+  if (error) {
+    el.querySelector('.file-size').innerHTML =
+      formatSize(item.file.size) + ` · <span style="color:var(--danger)">${esc(error)}</span>`;
+  }
+  updateSummary();
+}
+
+function setProgress(item, pct) {
+  const pb = document.getElementById(`pb-${item.id}`);
+  if (pb) pb.style.width = pct + '%';
+}
+
+function updateSummary() {
+  document.getElementById('sTot').textContent  = files.length;
+  document.getElementById('sDone').textContent = files.filter(f=>f.status==='done').length;
+  document.getElementById('sFail').textContent = files.filter(f=>f.status==='error').length;
+  document.getElementById('sPend').textContent = files.filter(f=>f.status==='pending').length;
+}
+
+function statusClass(s) {
+  return { pending:'status-pending', uploading:'status-uploading', done:'status-done', error:'status-error' }[s] || 'status-pending';
+}
+function statusLabel(s) {
+  return { pending:'Menunggu', uploading:'Mengupload…', done:'✅ Berhasil', error:'❌ Gagal' }[s] || s;
+}
+function formatSize(b) {
+  if (b < 1024)       return b + ' B';
+  if (b < 1024*1024)  return (b/1024).toFixed(1) + ' KB';
+  return (b/1024/1024).toFixed(2) + ' MB';
+}
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toast(msg, type = '') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast-item' + (type ? ' ' + type : '');
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3800);
+}
+</script>
+</body>
+</html>
